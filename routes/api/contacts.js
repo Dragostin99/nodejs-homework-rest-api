@@ -8,6 +8,7 @@ const {
   removeContact,
   addContact,
   updateContact,
+  updateStatusContact,
 } = require('../../models/contacts');
 
 router.get('/', async (req, res, next) => {
@@ -37,7 +38,6 @@ router.post('/', async (req, res, next) => {
   }
   const data = await addContact(body);
   const { statusCode, message } = data;
-  console.log(statusCode);
   res.status(statusCode);
   res.json(message);
 });
@@ -66,5 +66,24 @@ router.put('/:contactId', async (req, res, next) => {
     res.json(message);
   }
 });
+
+router.patch('/:contactId/favorite', async (req, res, next) => {
+  const contactId = req.params.contactId;
+  const body = req.body;
+  console.log('Request body:', body);
+
+  if (!body || typeof body.favorite !== 'boolean') {
+    return res.status(400).json({ message: 'Invalid favorite field' });
+  }
+
+  try {
+    const { statusCode, message } = await updateStatusContact(contactId, body);
+    res.status(statusCode).json(message);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
+});
+
 
 module.exports = router;
