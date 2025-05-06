@@ -1,0 +1,28 @@
+const { Schema, model } = require('mongoose');
+
+const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+const contact = new Schema({
+  name: {
+    type: String,
+    required: [true, 'Set name for contact'],
+  },
+  email: {
+    type: String,
+    match: [emailRegex, 'Invalid email address'],
+  },
+  phone: {
+    type: String,
+    match: /^[+\d\s-]+$/,
+    message:
+      'Phone number is not valid. Only digits, "+", and "-" are allowed.',
+  },
+  favorite: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const Contact = model('contact', contact);
+
+module.exports = Contact;
