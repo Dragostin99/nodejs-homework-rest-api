@@ -3,6 +3,10 @@ const { Schema, model } = require('mongoose');
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 const contact = new Schema({
+  owner: {
+    type: Schema.Types.ObjectId,
+    ref: 'user',
+  },
   name: {
     type: String,
     required: [true, 'Set name for contact'],
