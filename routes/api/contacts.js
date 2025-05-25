@@ -24,6 +24,11 @@ const {
 } = require('../../models/users');
 
 const { User } = require('../../models/schemas/Users');
+const {
+  verificationToken,
+  resendEmail,
+} = require('../../models/user-verify-token');
+
 
 router.get('/', async (req, res) => {
   res.status(200).json({ message: 'server is working' });
@@ -101,12 +106,11 @@ router.patch('/:contactId/favorite', async (req, res) => {
   res.status(statusCode).json(message);
 });
 
-router.post('/users/signup', async (req, res) => {
-  const body = req.body;
-  const data = await signupUser(body);
-  const { statusCode, message } = data;
-  res.status(statusCode).json(message);
-});
+outer.post('/users/signup', signupUser);
+
+router.get('/users/verify/:verificationToken', verificationToken);
+
+router.post('/users/verify/', resendEmail);
 
 router.post('/users/login', async (req, res) => {
   const body = req.body;

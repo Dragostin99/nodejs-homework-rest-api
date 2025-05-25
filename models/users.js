@@ -1,4 +1,5 @@
 const { User, userSchema } = require('./schemas/Users');
+const { v4: uuidv4 } = require('uuid');
 const Contact = require('./schemas/Schema');
 require('dotenv').config();
 require('./pass-config');
@@ -10,27 +11,42 @@ const multer = require('multer');
 const jimp = require('jimp');
 const path = require('path');
 const uploadDir = path.join(process.cwd(), 'tmp');
-const destinationDir = path.join(process.cwd(), 'public', 'avatars');
+const { authenticateEmail } = require('../models/email-sender');
 
-const signupUser = async (body) => {
+const signupUser = async (req, res) => {
   try {
+    const body = req.body;
     const { email, password } = body;
     const user = await User.findOne({ email });
     if (user) {
-      return { statusCode: 409, message: 'Email in use' };
+      return res.status(409).json({ message: 'Email in use' });
+    }
+    const { error } = userSchema.validate(body);
+
+    if (error) {
+      console.error(error.message);
+      return res.status(400).json({ message: `Bad Reques. ${error.message} ` });
     }
     const avatarURL = gravatar.url(email, {
       s: '200',
       r: 'pg',
       d: 'identicon',
     });
-    const createdUser = new User({ email, password, avatarURL });
+    const verificationToken = uuidv4();
+    const createdUser = new User({
+      email,
+      password,
+      avatarURL,
+      verificationToken,
+    });
     createdUser.setPass(password);
     await createdUser.save();
-    return { statusCode: 201, message: createdUser };
-  } catch (err) {
-    console.log(err);
-    return { statusCode: 400, message: `Bad Reques` };
+    authenticateEmail(email, verificationToken);
+
+    return res.status(201).json({ message: createdUser });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).json({ message: `Bad Reques` });
   }
 };
 
@@ -134,7 +150,6 @@ const storage = multer.diskStorage({
     fileSize: 1048576,
   },
 });
-console.log(destinationDir);
 
 const upload = multer({
   storage: storage,
