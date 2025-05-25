@@ -5,6 +5,12 @@ require('./pass-config');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
 const SECRET = process.env.SECRET;
+const gravatar = require('gravatar');
+const multer = require('multer');
+const jimp = require('jimp');
+const path = require('path');
+const uploadDir = path.join(process.cwd(), 'tmp');
+const destinationDir = path.join(process.cwd(), 'public', 'avatars');
 
 const signupUser = async (body) => {
   try {
@@ -13,20 +19,18 @@ const signupUser = async (body) => {
     if (user) {
       return { statusCode: 409, message: 'Email in use' };
     }
-    const { error } = userSchema.validate(body);
-
-    if (error) {
-      console.error(error.message);
-      return { statusCode: 400, message: `Bad Request. ${error.message} ` };
-    }
-
-    const createdUser = new User({ email, password });
+    const avatarURL = gravatar.url(email, {
+      s: '200',
+      r: 'pg',
+      d: 'identicon',
+    });
+    const createdUser = new User({ email, password, avatarURL });
     createdUser.setPass(password);
     await createdUser.save();
     return { statusCode: 201, message: createdUser };
   } catch (err) {
     console.log(err);
-    return { statusCode: 400, message: `Bad Request` };
+    return { statusCode: 400, message: `Bad Reques` };
   }
 };
 
@@ -119,6 +123,42 @@ const getUserContacts = async (user) => {
   }
 };
 
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  },
+  limits: {
+    fileSize: 1048576,
+  },
+});
+console.log(destinationDir);
+
+const upload = multer({
+  storage: storage,
+});
+
+const updateAvatar = async (user, uploadedFile) => {
+  try {
+    if (!user) {
+      return { statusCode: 401, message: 'Not authorized' };
+    }
+
+    const image = await jimp.read(uploadedFile.path);
+    image.resize(250, 250);
+    const fileExt = path.extname(uploadedFile.originalname);
+    const userEmail = user.email.replace(/[^a-zA-Z0-9]/g, '') + fileExt;
+    image.write('public/avatars/' + userEmail);
+    user.avatarURL = '/avatars/' + userEmail;
+    await user.save();
+    return { statusCode: 200, message: user.avatarURL };
+  } catch (err) {
+    return { statusCode: 400, message: 'Bad request' };
+  }
+};
+
 module.exports = {
   signupUser,
   loginUser,
@@ -126,4 +166,6 @@ module.exports = {
   logOutUser,
   addUserContact,
   getUserContacts,
+  upload,
+  updateAvatar,
 };
